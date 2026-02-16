@@ -31,7 +31,6 @@ public record CarouselSlideDto(
     int Id,
     string Title,
     string? Subtitle,
-    string ImageUrl,
     int? MediaAssetId,
     string? LinkUrl,
     string? ButtonText,
@@ -46,7 +45,6 @@ public record ProductDto(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    string ImageUrl,
     int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,
@@ -60,7 +58,6 @@ public record CollectionDto(
     int Id,
     string Name,
     string? Description,
-    string ImageUrl,
     int? MediaAssetId,
     string? LinkUrl,
     int VisitCount
@@ -118,7 +115,7 @@ public record UpsertNavbarLinkRequest(
 public record UpsertCarouselSlideRequest(
     string Title,
     string? Subtitle,
-    int MediaAssetId,          // ← references uploaded media asset
+    int? MediaAssetId,          // ← optional reference to uploaded media asset
     string? LinkUrl,
     string? ButtonText,
     int DisplayOrder,
@@ -144,7 +141,7 @@ public record UpsertProductRequest(
 public record UpsertCollectionRequest(
     string Name,
     string? Description,
-    int MediaAssetId,          // ← references uploaded media asset
+    int? MediaAssetId,          // ← references uploaded media asset
     string? LinkUrl,
     int VisitCount,
     int DisplayOrder,

@@ -99,18 +99,22 @@ public class AdminService : IAdminService
 
     public async Task<CarouselSlide> CreateCarouselSlideAsync(UpsertCarouselSlideRequest req)
     {
-        // Resolve ImageUrl from MediaAsset
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists (only if provided)
+        if (req.MediaAssetId.HasValue)
+            await ValidateMediaAsset(req.MediaAssetId.Value);
 
-        var slide = new CarouselSlide(req.Title, imageUrl, req.DisplayOrder)
+        var slide = new CarouselSlide(req.Title, req.DisplayOrder)
         {
-            Subtitle = req.Subtitle, LinkUrl = req.LinkUrl, ButtonText = req.ButtonText,
-            IsVisible = req.IsVisible, StartDate = req.StartDate, EndDate = req.EndDate,
-            MediaAssetId = req.MediaAssetId
+            Subtitle = req.Subtitle, MediaAssetId = req.MediaAssetId,
+            LinkUrl = req.LinkUrl, ButtonText = req.ButtonText,
+            IsVisible = req.IsVisible, StartDate = req.StartDate, EndDate = req.EndDate
         };
 
         var created = await _carouselRepo.AddAsync(slide);
-        await TrackMediaUsage(req.MediaAssetId, "CarouselSlide", created.Id, "ImageUrl");
+
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "CarouselSlide", created.Id, "MediaAssetId");
+
         return created;
     }
 
@@ -119,22 +123,21 @@ public class AdminService : IAdminService
         var slide = await _carouselRepo.GetByIdAsync(id);
         if (slide is null) return null;
 
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists (only if provided)
+        if (req.MediaAssetId.HasValue)
+            await ValidateMediaAsset(req.MediaAssetId.Value);
 
-        slide.Title = req.Title; slide.Subtitle = req.Subtitle; slide.ImageUrl = imageUrl;
+        slide.Title = req.Title; slide.Subtitle = req.Subtitle;
+        slide.MediaAssetId = req.MediaAssetId;
         slide.LinkUrl = req.LinkUrl; slide.ButtonText = req.ButtonText;
         slide.DisplayOrder = req.DisplayOrder; slide.IsVisible = req.IsVisible;
         slide.StartDate = req.StartDate; slide.EndDate = req.EndDate;
 
-        // Re-link media if asset changed
-        if (slide.MediaAssetId != req.MediaAssetId)
-        {
-            await _mediaUsageRepo.DeleteByEntityAsync("CarouselSlide", id);
-            slide.MediaAssetId = req.MediaAssetId;
-        }
-
         var updated = await _carouselRepo.UpdateAsync(slide);
-        await TrackMediaUsage(req.MediaAssetId, "CarouselSlide", updated.Id, "ImageUrl");
+
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "CarouselSlide", id, "MediaAssetId");
+
         return updated;
     }
 
@@ -153,18 +156,19 @@ public class AdminService : IAdminService
 
     public async Task<Product> CreateProductAsync(UpsertProductRequest req)
     {
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
+        await ValidateMediaAsset(req.MediaAssetId);
 
-        var product = new Product(req.Name, req.Price, imageUrl)
+        var product = new Product(req.Name, req.Price)
         {
             Description = req.Description, OriginalPrice = req.OriginalPrice,
+            MediaAssetId = req.MediaAssetId,
             CategoryLabel = req.CategoryLabel, Badge = req.Badge, Rating = req.Rating,
-            ReviewCount = req.ReviewCount, TrendingScore = req.TrendingScore, IsVisible = req.IsVisible,
-            MediaAssetId = req.MediaAssetId
+            ReviewCount = req.ReviewCount, TrendingScore = req.TrendingScore, IsVisible = req.IsVisible
         };
 
         var created = await _productRepo.AddAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "ImageUrl");
+        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "MediaAssetId");
         return created;
     }
 
@@ -173,21 +177,16 @@ public class AdminService : IAdminService
         var product = await _productRepo.GetByIdAsync(id);
         if (product is null) return null;
 
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
+        await ValidateMediaAsset(req.MediaAssetId);
 
         product.Name = req.Name; product.Description = req.Description; product.Price = req.Price;
-        product.OriginalPrice = req.OriginalPrice; product.ImageUrl = imageUrl;
+        product.OriginalPrice = req.OriginalPrice; product.MediaAssetId = req.MediaAssetId;
         product.CategoryLabel = req.CategoryLabel; product.Badge = req.Badge; product.Rating = req.Rating;
         product.ReviewCount = req.ReviewCount; product.TrendingScore = req.TrendingScore; product.IsVisible = req.IsVisible;
 
-        if (product.MediaAssetId != req.MediaAssetId)
-        {
-            await _mediaUsageRepo.DeleteByEntityAsync("Product", id);
-            product.MediaAssetId = req.MediaAssetId;
-        }
-
         var updated = await _productRepo.UpdateAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", updated.Id, "ImageUrl");
+        await TrackMediaUsage(req.MediaAssetId, "Product", id, "MediaAssetId");
         return updated;
     }
 
@@ -206,17 +205,20 @@ public class AdminService : IAdminService
 
     public async Task<Collection> CreateCollectionAsync(UpsertCollectionRequest req)
     {
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
 
-        var collection = new Collection(req.Name, imageUrl, req.DisplayOrder)
+        if (req.MediaAssetId.HasValue)
+            await ValidateMediaAsset(req.MediaAssetId.Value);
+
+        var collection = new Collection(req.Name, req.DisplayOrder)
         {
-            Description = req.Description, LinkUrl = req.LinkUrl,
-            VisitCount = req.VisitCount, IsVisible = req.IsVisible,
-            MediaAssetId = req.MediaAssetId
+            Description = req.Description, MediaAssetId = req.MediaAssetId,
+            LinkUrl = req.LinkUrl, VisitCount = req.VisitCount, IsVisible = req.IsVisible
         };
 
         var created = await _collectionRepo.AddAsync(collection);
-        await TrackMediaUsage(req.MediaAssetId, "Collection", created.Id, "ImageUrl");
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "Collection", created.Id, "MediaAssetId");
         return created;
     }
 
@@ -225,20 +227,18 @@ public class AdminService : IAdminService
         var collection = await _collectionRepo.GetByIdAsync(id);
         if (collection is null) return null;
 
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
+        if (req.MediaAssetId.HasValue)
+            await ValidateMediaAsset(req.MediaAssetId.Value);
 
-        collection.Name = req.Name; collection.Description = req.Description; collection.ImageUrl = imageUrl;
+        collection.Name = req.Name; collection.Description = req.Description;
+        collection.MediaAssetId = req.MediaAssetId;
         collection.LinkUrl = req.LinkUrl; collection.VisitCount = req.VisitCount;
         collection.DisplayOrder = req.DisplayOrder; collection.IsVisible = req.IsVisible;
 
-        if (collection.MediaAssetId != req.MediaAssetId)
-        {
-            await _mediaUsageRepo.DeleteByEntityAsync("Collection", id);
-            collection.MediaAssetId = req.MediaAssetId;
-        }
-
         var updated = await _collectionRepo.UpdateAsync(collection);
-        await TrackMediaUsage(req.MediaAssetId, "Collection", updated.Id, "ImageUrl");
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "Collection", id, "MediaAssetId");
         return updated;
     }
 
@@ -287,27 +287,28 @@ public class AdminService : IAdminService
 
     public async Task<SocialIcon> CreateSocialIconAsync(UpsertSocialIconRequest req)
     {
-        // IconRef can come from: 1) a CSS class string, or 2) a media asset URL
         var iconRef = req.IconRef ?? "";
-        int? mediaAssetId = req.MediaAssetId;
 
-        if (mediaAssetId.HasValue)
+        // If a media asset is provided, validate it and use its URL as the icon ref
+        if (req.MediaAssetId.HasValue)
         {
-            iconRef = await ResolveImageUrl(mediaAssetId.Value);
+            var asset = await _mediaAssetRepo.GetByIdAsync(req.MediaAssetId.Value);
+            if (asset is null)
+                throw new ArgumentException($"Media asset with ID {req.MediaAssetId} not found.");
+            iconRef = asset.Url;
         }
-
-        if (string.IsNullOrWhiteSpace(iconRef))
-            throw new ArgumentException("Either IconRef or MediaAssetId must be provided.");
 
         var icon = new SocialIcon(req.Platform, iconRef, req.Url, req.DisplayOrder)
         {
-            IsVisible = req.IsVisible,
-            MediaAssetId = mediaAssetId
+            MediaAssetId = req.MediaAssetId,
+            IsVisible = req.IsVisible
         };
 
         var created = await _socialIconRepo.AddAsync(icon);
-        if (mediaAssetId.HasValue)
-            await TrackMediaUsage(mediaAssetId.Value, "SocialIcon", created.Id, "IconRef");
+
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "SocialIcon", created.Id, "MediaAssetId");
+
         return created;
     }
 
@@ -316,29 +317,26 @@ public class AdminService : IAdminService
         var icon = await _socialIconRepo.GetByIdAsync(id);
         if (icon is null) return null;
 
-        var iconRef = req.IconRef ?? "";
-        int? mediaAssetId = req.MediaAssetId;
-
-        if (mediaAssetId.HasValue)
-        {
-            iconRef = await ResolveImageUrl(mediaAssetId.Value);
-        }
-
-        if (string.IsNullOrWhiteSpace(iconRef))
-            throw new ArgumentException("Either IconRef or MediaAssetId must be provided.");
-
-        icon.Platform = req.Platform; icon.IconRef = iconRef; icon.Url = req.Url;
+        icon.Platform = req.Platform; icon.Url = req.Url;
         icon.DisplayOrder = req.DisplayOrder; icon.IsVisible = req.IsVisible;
 
-        if (icon.MediaAssetId != mediaAssetId)
+        var iconRef = req.IconRef ?? "";
+        if (req.MediaAssetId.HasValue)
         {
-            await _mediaUsageRepo.DeleteByEntityAsync("SocialIcon", id);
-            icon.MediaAssetId = mediaAssetId;
+            var asset = await _mediaAssetRepo.GetByIdAsync(req.MediaAssetId.Value);
+            if (asset is null)
+                throw new ArgumentException($"Media asset with ID {req.MediaAssetId} not found.");
+            iconRef = asset.Url;
         }
 
+        icon.IconRef = iconRef;
+        icon.MediaAssetId = req.MediaAssetId;
+
         var updated = await _socialIconRepo.UpdateAsync(icon);
-        if (mediaAssetId.HasValue)
-            await TrackMediaUsage(mediaAssetId.Value, "SocialIcon", updated.Id, "IconRef");
+
+        if (req.MediaAssetId.HasValue)
+            await TrackMediaUsage(req.MediaAssetId.Value, "SocialIcon", id, "MediaAssetId");
+
         return updated;
     }
 
@@ -349,23 +347,23 @@ public class AdminService : IAdminService
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Media Helpers
+    //  Private Helpers
     // ════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Looks up a MediaAsset by ID and returns its URL.
-    /// Throws if the asset ID is invalid.
+    /// Validates that a media asset with the given ID exists.
     /// </summary>
-    private async Task<string> ResolveImageUrl(int mediaAssetId)
+    private async Task ValidateMediaAsset(int mediaAssetId)
     {
         var asset = await _mediaAssetRepo.GetByIdAsync(mediaAssetId);
         if (asset is null)
-            throw new ArgumentException($"Media asset with ID {mediaAssetId} not found. Upload the image first via /api/admin/media/upload.");
-        return asset.Url;
+            throw new ArgumentException(
+                $"Media asset with ID {mediaAssetId} not found. Upload the image first via /api/admin/media/upload.");
     }
 
     /// <summary>
-    /// Creates a MediaUsage record linking the media asset to the entity.
+    /// Creates a MediaUsage record to track that an entity uses a specific media asset.
+    /// Avoids creating duplicates.
     /// </summary>
     private async Task TrackMediaUsage(int mediaAssetId, string entityType, int entityId, string fieldName)
     {

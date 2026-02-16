@@ -92,15 +92,12 @@ public class AppDbContext : DbContext
             .HasForeignKey(v => v.CategoryAttributeId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ── Media Asset ──
-        modelBuilder.Entity<MediaAsset>()
-            .HasIndex(m => m.Category);
-
+        // ── MediaAsset index ──
         modelBuilder.Entity<MediaAsset>()
             .HasIndex(m => m.FileName)
             .IsUnique();
 
-        // ── Media Usage ──
+        // ── MediaUsage indexes ──
         modelBuilder.Entity<MediaUsage>()
             .HasIndex(u => new { u.EntityType, u.EntityId });
 
@@ -110,39 +107,39 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<MediaUsage>()
             .HasOne(u => u.MediaAsset)
-            .WithMany(a => a.Usages)
+            .WithMany(m => m.Usages)
             .HasForeignKey(u => u.MediaAssetId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ── Entity → MediaAsset FKs (SetNull on delete) ──
+        // ── Entity → MediaAsset FK (SetNull on delete) ──
         modelBuilder.Entity<CarouselSlide>()
-            .HasOne(e => e.MediaAsset)
+            .HasOne(s => s.MediaAsset)
             .WithMany()
-            .HasForeignKey(e => e.MediaAssetId)
+            .HasForeignKey(s => s.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Collection>()
-            .HasOne(e => e.MediaAsset)
+            .HasOne(c => c.MediaAsset)
             .WithMany()
-            .HasForeignKey(e => e.MediaAssetId)
+            .HasForeignKey(c => c.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Product>()
-            .HasOne(e => e.MediaAsset)
+            .HasOne(p => p.MediaAsset)
             .WithMany()
-            .HasForeignKey(e => e.MediaAssetId)
+            .HasForeignKey(p => p.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Category>()
-            .HasOne(e => e.MediaAsset)
+            .HasOne(c => c.MediaAsset)
             .WithMany()
-            .HasForeignKey(e => e.MediaAssetId)
+            .HasForeignKey(c => c.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<SocialIcon>()
-            .HasOne(e => e.MediaAsset)
+            .HasOne(s => s.MediaAsset)
             .WithMany()
-            .HasForeignKey(e => e.MediaAssetId)
+            .HasForeignKey(s => s.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

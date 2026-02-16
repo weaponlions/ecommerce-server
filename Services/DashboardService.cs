@@ -148,7 +148,7 @@ public class DashboardService : IDashboardService
     {
         var slides = await _carouselRepo.GetActiveSlidesAsync(DateTime.UtcNow);
         return slides.Select(s => new CarouselSlideDto(
-            s.Id, s.Title, s.Subtitle, s.ImageUrl, s.MediaAssetId,
+            s.Id, s.Title, s.Subtitle, s.MediaAssetId,
             s.LinkUrl, s.ButtonText, s.DisplayOrder
         )).ToList();
     }
@@ -158,7 +158,7 @@ public class DashboardService : IDashboardService
         var products = await _productRepo.GetTrendingAsync(MaxTrendingProducts);
         return products.Select(p => new ProductDto(
             p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
-            p.ImageUrl, p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount
+            p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount
         )).ToList();
     }
 
@@ -167,7 +167,7 @@ public class DashboardService : IDashboardService
         var visits = await _recentlyVisitedRepo.GetByUserAsync(userId, MaxRecentlyVisited);
         return visits.Select(r => new ProductDto(
             r.Product.Id, r.Product.Name, r.Product.Description,
-            r.Product.Price, r.Product.OriginalPrice, r.Product.ImageUrl, r.Product.MediaAssetId,
+            r.Product.Price, r.Product.OriginalPrice, r.Product.MediaAssetId,
             r.Product.CategoryLabel, r.Product.Badge, r.Product.Rating, r.Product.ReviewCount
         )).ToList();
     }
@@ -176,7 +176,7 @@ public class DashboardService : IDashboardService
     {
         var collections = await _collectionRepo.GetMostVisitedAsync(MaxCollections);
         return collections.Select(c => new CollectionDto(
-            c.Id, c.Name, c.Description, c.ImageUrl, c.MediaAssetId, c.LinkUrl, c.VisitCount
+            c.Id, c.Name, c.Description, c.MediaAssetId, c.LinkUrl, c.VisitCount
         )).ToList();
     }
 

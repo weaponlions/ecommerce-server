@@ -50,5 +50,13 @@ public class SocialIcon
     [Range(0, int.MaxValue, ErrorMessage = "DisplayOrder must be a non-negative number.")]
     public int DisplayOrder { get; set; }
 
+    /// <summary>
+    /// FK to MediaAsset — optional uploaded icon image.
+    /// </summary>
+    public int? MediaAssetId { get; set; }
+
     public bool IsVisible { get; set; } = true;
+
+    // ── Navigation ──
+    public MediaAsset? MediaAsset { get; set; }
 }

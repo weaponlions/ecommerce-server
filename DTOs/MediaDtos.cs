@@ -10,7 +10,7 @@ public record MediaAssetResponse(
     string OriginalFileName,
     string ContentType,
     long FileSizeBytes,
-    string FileSize,          // Human-readable: "1.2 MB"
+    string FileSizeFormatted,
     int? Width,
     int? Height,
     string Url,
@@ -28,7 +28,7 @@ public record MediaAssetDetailResponse(
     string OriginalFileName,
     string ContentType,
     long FileSizeBytes,
-    string FileSize,
+    string FileSizeFormatted,
     int? Width,
     int? Height,
     string Url,
@@ -40,10 +40,6 @@ public record MediaAssetDetailResponse(
     List<MediaUsageResponse> Usages
 );
 
-// ══════════════════════════════════════════════════════════════
-//  Media Usage Responses
-// ══════════════════════════════════════════════════════════════
-
 public record MediaUsageResponse(
     int Id,
     string EntityType,
@@ -53,17 +49,8 @@ public record MediaUsageResponse(
 );
 
 // ══════════════════════════════════════════════════════════════
-//  Requests
+//  Media Requests
 // ══════════════════════════════════════════════════════════════
-
-/// <summary>
-/// Sent as multipart/form-data along with the file upload.
-/// </summary>
-public record UploadMediaRequest(
-    string? AltText,
-    string? Title,
-    string Category    // "carousel", "product", "collection", "category", "social-icon", "general"
-);
 
 public record UpdateMediaMetadataRequest(
     string? AltText,
@@ -73,7 +60,7 @@ public record UpdateMediaMetadataRequest(
 
 public record LinkMediaRequest(
     int MediaAssetId,
-    string EntityType,   // "CarouselSlide", "Product", "Collection", "Category", "SocialIcon"
+    string EntityType,
     int EntityId,
-    string FieldName     // "ImageUrl", "IconRef", etc.
+    string FieldName
 );

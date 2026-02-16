@@ -32,19 +32,19 @@ public static class SeedData
 
         // ── Carousel Slides ──
         db.CarouselSlides.AddRange(
-            new CarouselSlide("Summer Collection 2026", "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920", 1)
+            new CarouselSlide("Summer Collection 2026", 1)
             {
                 Subtitle = "Up to 50% off on all summer essentials",
                 LinkUrl = "/shop/summer",
                 ButtonText = "Shop Now"
             },
-            new CarouselSlide("New Arrivals", "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1920", 2)
+            new CarouselSlide("New Arrivals", 2)
             {
                 Subtitle = "Check out the latest trends",
                 LinkUrl = "/shop/new",
                 ButtonText = "Explore"
             },
-            new CarouselSlide("Premium Electronics", "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1920", 3)
+            new CarouselSlide("Premium Electronics", 3)
             {
                 Subtitle = "Tech that redefines your life",
                 LinkUrl = "/shop/electronics",
@@ -54,36 +54,36 @@ public static class SeedData
 
         // ── Products ──
         db.Products.AddRange(
-            new Product("Classic White Sneakers",    89.99m, "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400")
+            new Product("Classic White Sneakers",    89.99m)
                 { OriginalPrice = 129.99m, CategoryLabel = "Footwear",    Badge = "Hot",        Rating = 4.5, ReviewCount = 342,  TrendingScore = 95 },
-            new Product("Wireless Noise-Cancelling", 249.99m, "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400")
+            new Product("Wireless Noise-Cancelling", 249.99m)
                 { OriginalPrice = 349.99m, CategoryLabel = "Electronics", Badge = "Bestseller", Rating = 4.8, ReviewCount = 1205, TrendingScore = 98 },
-            new Product("Minimalist Leather Watch",  159.99m, "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400")
+            new Product("Minimalist Leather Watch",  159.99m)
                 { CategoryLabel = "Accessories", Badge = "New",        Rating = 4.6, ReviewCount = 89,  TrendingScore = 82 },
-            new Product("Organic Cotton T-Shirt",    34.99m, "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400")
+            new Product("Organic Cotton T-Shirt",    34.99m)
                 { CategoryLabel = "Clothing",    Rating = 4.3, ReviewCount = 567, TrendingScore = 75 },
-            new Product("Smart Fitness Tracker",     79.99m, "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=400")
+            new Product("Smart Fitness Tracker",     79.99m)
                 { OriginalPrice = 99.99m,  CategoryLabel = "Electronics", Badge = "Sale",       Rating = 4.4, ReviewCount = 892, TrendingScore = 88 },
-            new Product("Designer Sunglasses",       199.99m, "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400")
+            new Product("Designer Sunglasses",       199.99m)
                 { CategoryLabel = "Accessories", Badge = "Trending",   Rating = 4.7, ReviewCount = 234, TrendingScore = 91 },
-            new Product("Premium Yoga Mat",          49.99m, "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400")
+            new Product("Premium Yoga Mat",          49.99m)
                 { OriginalPrice = 69.99m,  CategoryLabel = "Fitness",     Rating = 4.2, ReviewCount = 156, TrendingScore = 60 },
-            new Product("Silk Blend Scarf",          44.99m, "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400")
+            new Product("Silk Blend Scarf",          44.99m)
                 { CategoryLabel = "Accessories", Badge = "New",        Rating = 4.1, ReviewCount = 78,  TrendingScore = 55 },
-            new Product("Heritage Leather Backpack", 179.99m, "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400")
+            new Product("Heritage Leather Backpack", 179.99m)
                 { OriginalPrice = 219.99m, CategoryLabel = "Bags",        Badge = "Popular",    Rating = 4.6, ReviewCount = 445, TrendingScore = 85 },
-            new Product("Portable Bluetooth Speaker", 59.99m, "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400")
+            new Product("Portable Bluetooth Speaker", 59.99m)
                 { OriginalPrice = 79.99m,  CategoryLabel = "Electronics", Badge = "Deal",       Rating = 4.3, ReviewCount = 678, TrendingScore = 78 }
         );
 
         // ── Collections ──
         db.Collections.AddRange(
-            new Collection("Summer Essentials",  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600", 1) { Description = "Beat the heat in style",             LinkUrl = "/collections/summer",    VisitCount = 12500 },
-            new Collection("Work From Home",     "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=600", 2) { Description = "Comfort meets productivity",         LinkUrl = "/collections/wfh",       VisitCount = 9800 },
-            new Collection("Fitness & Wellness", "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600", 3) { Description = "Gear up for your best self",         LinkUrl = "/collections/fitness",   VisitCount = 8700 },
-            new Collection("Tech Gadgets",       "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600", 4) { Description = "Innovation at your fingertips",      LinkUrl = "/collections/tech",      VisitCount = 11200 },
-            new Collection("Minimalist Living",  "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=600", 5) { Description = "Less is more — curated simplicity",  LinkUrl = "/collections/minimalist", VisitCount = 6300 },
-            new Collection("Luxury Picks",       "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600", 6) { Description = "Premium products for refined taste", LinkUrl = "/collections/luxury",    VisitCount = 7500 }
+            new Collection("Summer Essentials",  1) { Description = "Beat the heat in style",             LinkUrl = "/collections/summer",    VisitCount = 12500 },
+            new Collection("Work From Home",     2) { Description = "Comfort meets productivity",         LinkUrl = "/collections/wfh",       VisitCount = 9800 },
+            new Collection("Fitness & Wellness", 3) { Description = "Gear up for your best self",         LinkUrl = "/collections/fitness",   VisitCount = 8700 },
+            new Collection("Tech Gadgets",       4) { Description = "Innovation at your fingertips",      LinkUrl = "/collections/tech",      VisitCount = 11200 },
+            new Collection("Minimalist Living",  5) { Description = "Less is more — curated simplicity",  LinkUrl = "/collections/minimalist", VisitCount = 6300 },
+            new Collection("Luxury Picks",       6) { Description = "Premium products for refined taste", LinkUrl = "/collections/luxury",    VisitCount = 7500 }
         );
 
         // ── Footer Links ──

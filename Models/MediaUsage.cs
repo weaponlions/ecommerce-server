@@ -3,33 +3,31 @@ using System.ComponentModel.DataAnnotations;
 namespace eShopServer.Models;
 
 /// <summary>
-/// Tracks where a MediaAsset is used across the system.
-/// E.g. "CarouselSlide #3, field ImageUrl" or "SocialIcon #1, field IconRef".
+/// Tracks where a MediaAsset is used (e.g., which entity and field).
 /// </summary>
 public class MediaUsage
 {
     public int Id { get; set; }
 
     /// <summary>
-    /// FK to the media asset being used.
+    /// FK to the MediaAsset.
     /// </summary>
     public int MediaAssetId { get; set; }
 
     /// <summary>
-    /// The entity type that uses this asset (e.g. "CarouselSlide", "Collection",
-    /// "Product", "Category", "SocialIcon").
+    /// Entity type name, e.g. "CarouselSlide", "Product", "Collection".
     /// </summary>
     [Required]
     [MaxLength(100)]
     public string EntityType { get; set; } = string.Empty;
 
     /// <summary>
-    /// The primary key of the entity that uses this asset.
+    /// The Id of the entity that uses this asset.
     /// </summary>
     public int EntityId { get; set; }
 
     /// <summary>
-    /// Which field on the entity holds this reference (e.g. "ImageUrl", "IconRef").
+    /// Which field on the entity uses this asset, e.g. "ImageUrl", "IconRef".
     /// </summary>
     [Required]
     [MaxLength(100)]

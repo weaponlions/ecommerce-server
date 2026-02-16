@@ -9,7 +9,6 @@ public record CategoryResponse(
     string Name,
     string Slug,
     string? Description,
-    string? ImageUrl,
     int? MediaAssetId,
     bool IsActive,
     List<CategoryAttributeResponse>? Attributes
@@ -20,7 +19,6 @@ public record CategoryListResponse(
     string Name,
     string Slug,
     string? Description,
-    string? ImageUrl,
     int? MediaAssetId
 );
 
@@ -67,7 +65,6 @@ public record ProductDetailResponse(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    string ImageUrl,
     int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,
@@ -85,7 +82,6 @@ public record ProductListItemResponse(
     string Name,
     decimal Price,
     decimal? OriginalPrice,
-    string ImageUrl,
     int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,

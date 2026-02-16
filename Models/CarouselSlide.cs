@@ -38,6 +38,11 @@ public class CarouselSlide
     [Range(0, int.MaxValue, ErrorMessage = "DisplayOrder must be a non-negative number.")]
     public int DisplayOrder { get; set; }
 
+    /// <summary>
+    /// FK to MediaAsset — the slide's image.
+    /// </summary>
+    public int? MediaAssetId { get; set; }
+
     public bool IsVisible { get; set; } = true;
 
     /// <summary>
@@ -46,6 +51,9 @@ public class CarouselSlide
     /// </summary>
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+
+    // ── Navigation ──
+    public MediaAsset? MediaAsset { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

@@ -38,5 +38,13 @@ public class Collection
     [Range(0, int.MaxValue, ErrorMessage = "DisplayOrder must be a non-negative number.")]
     public int DisplayOrder { get; set; }
 
+    /// <summary>
+    /// FK to MediaAsset — the collection's image.
+    /// </summary>
+    public int? MediaAssetId { get; set; }
+
     public bool IsVisible { get; set; } = true;
+
+    // ── Navigation ──
+    public MediaAsset? MediaAsset { get; set; }
 }

@@ -46,11 +46,17 @@ public class Category
     [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
     public string? Description { get; set; }
 
+    /// <summary>
+    /// FK to MediaAsset — the category's image.
+    /// </summary>
+    public int? MediaAssetId { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // ── Navigation ──
+    public MediaAsset? MediaAsset { get; set; }
     public List<CategoryAttribute> Attributes { get; set; } = [];
     public List<Product> Products { get; set; } = [];
 }

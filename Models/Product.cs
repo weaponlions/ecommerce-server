@@ -64,10 +64,16 @@ public class Product
     [Range(-1, int.MaxValue, ErrorMessage = "Stock must be -1 (unlimited) or >= 0.")]
     public int Stock { get; set; } = -1;
 
+    /// <summary>
+    /// FK to MediaAsset — the product's image.
+    /// </summary>
+    public int? MediaAssetId { get; set; }
+
     public bool IsVisible { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // ── Navigation ──
     public Category? Category { get; set; }
+    public MediaAsset? MediaAsset { get; set; }
     public List<ProductAttributeValue> AttributeValues { get; set; } = [];
 }

@@ -39,7 +39,7 @@ public class ProductService : IProductService
     {
         var categories = await _categoryRepo.GetActiveCategoriesAsync();
         return categories.Select(c => new CategoryListResponse(
-            c.Id, c.Name, c.Slug, c.Description, c.ImageUrl, c.MediaAssetId
+            c.Id, c.Name, c.Slug, c.Description, c.MediaAssetId
         ));
     }
 
@@ -60,23 +60,21 @@ public class ProductService : IProductService
 
     public async Task<Category> CreateCategoryAsync(UpsertCategoryRequest request)
     {
-        // Resolve ImageUrl from MediaAsset if provided
-        string? imageUrl = null;
+        // Validate the media asset if provided
         if (request.MediaAssetId.HasValue)
-            imageUrl = await ResolveImageUrl(request.MediaAssetId.Value);
+            await ValidateMediaAsset(request.MediaAssetId.Value);
 
         var category = new Category(request.Name, request.Slug)
         {
             Description = request.Description,
-            ImageUrl = imageUrl,
-            IsActive = request.IsActive,
-            MediaAssetId = request.MediaAssetId
+            MediaAssetId = request.MediaAssetId,
+            IsActive = request.IsActive
         };
 
         var created = await _categoryRepo.AddAsync(category);
 
         if (request.MediaAssetId.HasValue)
-            await TrackMediaUsage(request.MediaAssetId.Value, "Category", created.Id, "ImageUrl");
+            await TrackMediaUsage(request.MediaAssetId.Value, "Category", created.Id, "MediaAssetId");
 
         return created;
     }
@@ -86,26 +84,20 @@ public class ProductService : IProductService
         var category = await _categoryRepo.GetByIdAsync(id);
         if (category is null) return null;
 
-        string? imageUrl = null;
+        // Validate the media asset if provided
         if (request.MediaAssetId.HasValue)
-            imageUrl = await ResolveImageUrl(request.MediaAssetId.Value);
+            await ValidateMediaAsset(request.MediaAssetId.Value);
 
         category.Name = request.Name;
         category.Slug = request.Slug.ToLowerInvariant();
         category.Description = request.Description;
-        category.ImageUrl = imageUrl;
+        category.MediaAssetId = request.MediaAssetId;
         category.IsActive = request.IsActive;
-
-        if (category.MediaAssetId != request.MediaAssetId)
-        {
-            await _mediaUsageRepo.DeleteByEntityAsync("Category", id);
-            category.MediaAssetId = request.MediaAssetId;
-        }
 
         var updated = await _categoryRepo.UpdateAsync(category);
 
         if (request.MediaAssetId.HasValue)
-            await TrackMediaUsage(request.MediaAssetId.Value, "Category", updated.Id, "ImageUrl");
+            await TrackMediaUsage(request.MediaAssetId.Value, "Category", id, "MediaAssetId");
 
         return updated;
     }
@@ -256,8 +248,8 @@ public class ProductService : IProductService
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new ProductListItemResponse(
-                p.Id, p.Name, p.Price, p.OriginalPrice, p.ImageUrl, p.MediaAssetId,
-                p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock
+                p.Id, p.Name, p.Price, p.OriginalPrice,
+                p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock
             )).ToList();
 
         return new PagedResponse<ProductListItemResponse>(items, totalCount, page, pageSize, totalPages);
@@ -265,12 +257,14 @@ public class ProductService : IProductService
 
     public async Task<ProductDetailResponse> CreateProductAsync(CreateProductRequest req)
     {
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
+        await ValidateMediaAsset(req.MediaAssetId);
 
-        var product = new Product(req.Name, req.Price, imageUrl)
+        var product = new Product(req.Name, req.Price)
         {
             Description = req.Description,
             OriginalPrice = req.OriginalPrice,
+            MediaAssetId = req.MediaAssetId,
             CategoryLabel = req.CategoryLabel,
             Badge = req.Badge,
             Rating = req.Rating,
@@ -278,12 +272,11 @@ public class ProductService : IProductService
             TrendingScore = req.TrendingScore,
             IsVisible = req.IsVisible,
             CategoryId = req.CategoryId,
-            Stock = req.Stock,
-            MediaAssetId = req.MediaAssetId
+            Stock = req.Stock
         };
 
         var created = await _productRepo.AddAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "ImageUrl");
+        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "MediaAssetId");
 
         // ── Save attribute values ──
         if (req.CategoryId.HasValue && req.Attributes != null)
@@ -299,13 +292,14 @@ public class ProductService : IProductService
         var product = await _productRepo.GetByIdAsync(id);
         if (product is null) return null;
 
-        var imageUrl = await ResolveImageUrl(req.MediaAssetId);
+        // Validate the media asset exists
+        await ValidateMediaAsset(req.MediaAssetId);
 
         product.Name = req.Name;
         product.Description = req.Description;
         product.Price = req.Price;
         product.OriginalPrice = req.OriginalPrice;
-        product.ImageUrl = imageUrl;
+        product.MediaAssetId = req.MediaAssetId;
         product.CategoryLabel = req.CategoryLabel;
         product.Badge = req.Badge;
         product.Rating = req.Rating;
@@ -313,13 +307,6 @@ public class ProductService : IProductService
         product.TrendingScore = req.TrendingScore;
         product.IsVisible = req.IsVisible;
         product.Stock = req.Stock;
-
-        // ── Re-link media if asset changed ──
-        if (product.MediaAssetId != req.MediaAssetId)
-        {
-            await _mediaUsageRepo.DeleteByEntityAsync("Product", id);
-            product.MediaAssetId = req.MediaAssetId;
-        }
 
         // ── If category changed, clear old attribute values ──
         if (product.CategoryId != req.CategoryId)
@@ -329,7 +316,7 @@ public class ProductService : IProductService
         }
 
         await _productRepo.UpdateAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", product.Id, "ImageUrl");
+        await TrackMediaUsage(req.MediaAssetId, "Product", id, "MediaAssetId");
 
         // ── Save new attribute values ──
         if (req.CategoryId.HasValue && req.Attributes != null)
@@ -354,7 +341,7 @@ public class ProductService : IProductService
     private CategoryResponse MapCategoryResponse(Category c)
     {
         return new CategoryResponse(
-            c.Id, c.Name, c.Slug, c.Description, c.ImageUrl, c.MediaAssetId, c.IsActive,
+            c.Id, c.Name, c.Slug, c.Description, c.MediaAssetId, c.IsActive,
             c.Attributes?.Select(MapAttributeResponse).ToList()
         );
     }
@@ -406,8 +393,8 @@ public class ProductService : IProductService
         }
 
         return new ProductDetailResponse(
-            p.Id, p.Name, p.Description, p.Price, p.OriginalPrice, p.ImageUrl, p.MediaAssetId,
-            p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
+            p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
+            p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
             p.CategoryId, categoryName, categorySlug, attributes
         );
     }
@@ -430,6 +417,37 @@ public class ProductService : IProductService
                     $"Attribute '{catAttr.DisplayName}' is required for this category.");
             }
         }
+    }
+
+    /// <summary>
+    /// Validates that a media asset with the given ID exists.
+    /// </summary>
+    private async Task ValidateMediaAsset(int mediaAssetId)
+    {
+        var asset = await _mediaAssetRepo.GetByIdAsync(mediaAssetId);
+        if (asset is null)
+            throw new ArgumentException(
+                $"Media asset with ID {mediaAssetId} not found. Upload the image first via /api/admin/media/upload.");
+    }
+
+    /// <summary>
+    /// Creates a MediaUsage record to track that an entity uses a specific media asset.
+    /// Avoids creating duplicates.
+    /// </summary>
+    private async Task TrackMediaUsage(int mediaAssetId, string entityType, int entityId, string fieldName)
+    {
+        var existing = await _mediaUsageRepo.FindExactAsync(
+            mediaAssetId, entityType, entityId, fieldName);
+        if (existing != null) return;
+
+        var usage = new MediaUsage
+        {
+            MediaAssetId = mediaAssetId,
+            EntityType = entityType,
+            EntityId = entityId,
+            FieldName = fieldName
+        };
+        await _mediaUsageRepo.AddAsync(usage);
     }
 
     private static void ValidateAttributeValue(CategoryAttribute attr, string value)
@@ -499,40 +517,5 @@ public class ProductService : IProductService
 
         throw new ArgumentException(
             $"Invalid DataType: '{dataType}'. Valid values: String, Number, Select, MultiSelect, Boolean");
-    }
-
-    // ════════════════════════════════════════════════════════════════
-    //  Media Helpers
-    // ════════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Looks up a MediaAsset by ID and returns its URL.
-    /// Throws if the asset ID is invalid.
-    /// </summary>
-    private async Task<string> ResolveImageUrl(int mediaAssetId)
-    {
-        var asset = await _mediaAssetRepo.GetByIdAsync(mediaAssetId);
-        if (asset is null)
-            throw new ArgumentException($"Media asset with ID {mediaAssetId} not found. Upload the image first via /api/admin/media/upload.");
-        return asset.Url;
-    }
-
-    /// <summary>
-    /// Creates a MediaUsage record linking the media asset to the entity.
-    /// </summary>
-    private async Task TrackMediaUsage(int mediaAssetId, string entityType, int entityId, string fieldName)
-    {
-        var existing = await _mediaUsageRepo.FindExactAsync(
-            mediaAssetId, entityType, entityId, fieldName);
-        if (existing != null) return;
-
-        var usage = new MediaUsage
-        {
-            MediaAssetId = mediaAssetId,
-            EntityType = entityType,
-            EntityId = entityId,
-            FieldName = fieldName
-        };
-        await _mediaUsageRepo.AddAsync(usage);
     }
 }

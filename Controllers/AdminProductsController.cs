@@ -103,7 +103,7 @@ public class AdminProductsController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var filter = new ProductFilterRequest(
-            null, null, null, null, null, null, null, false, page, pageSize);
+            null, null, null, null, null, null, null, null, false, page, pageSize);
         var result = await _productService.GetProductsAsync(filter);
         return Ok(result);
     }
@@ -146,4 +146,45 @@ public class AdminProductsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteProduct(int id)
         => await _productService.DeleteProductAsync(id) ? NoContent() : NotFound();
+
+    // ════════════════════════════════════════════════════════════════
+    //  Collection ↔ Product Management
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Lists all products assigned to a collection.
+    /// </summary>
+    [HttpGet("~/api/admin/collections/{collectionId:int}/products")]
+    public async Task<IActionResult> GetCollectionProducts(int collectionId)
+    {
+        var result = await _productService.GetCollectionProductsAsync(collectionId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Adds a product to a collection.
+    /// </summary>
+    [HttpPost("~/api/admin/collections/{collectionId:int}/products")]
+    public async Task<IActionResult> AddProductToCollection(
+        int collectionId, [FromBody] AddProductToCollectionRequest request)
+    {
+        try
+        {
+            await _productService.AddProductToCollectionAsync(collectionId, request);
+            return Ok(new { message = "Product added to collection." });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Removes a product from a collection.
+    /// </summary>
+    [HttpDelete("~/api/admin/collections/{collectionId:int}/products/{productId:int}")]
+    public async Task<IActionResult> RemoveProductFromCollection(int collectionId, int productId)
+        => await _productService.RemoveProductFromCollectionAsync(collectionId, productId)
+            ? NoContent()
+            : NotFound();
 }

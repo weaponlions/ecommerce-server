@@ -47,6 +47,7 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetProducts(
         [FromQuery] int? categoryId,
         [FromQuery] string? categorySlug,
+        [FromQuery] int? collectionId,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
         [FromQuery] string? search,
@@ -67,7 +68,7 @@ public class ProductsController : ControllerBase
         }
 
         var filter = new ProductFilterRequest(
-            categoryId, categorySlug, minPrice, maxPrice,
+            categoryId, categorySlug, collectionId, minPrice, maxPrice,
             search, attributes.Count > 0 ? attributes : null,
             sortBy, sortDescending, page, pageSize
         );
@@ -77,12 +78,32 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
-    /// Returns a single product with its category attributes.
+    /// Returns a single product with its category attributes and variant siblings.
     /// </summary>
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetProduct(int id)
     {
         var result = await _productService.GetProductByIdAsync(id);
         return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Returns all products belonging to a specific collection.
+    /// </summary>
+    [HttpGet("collections/{collectionId:int}/products")]
+    public async Task<IActionResult> GetCollectionProducts(int collectionId)
+    {
+        var result = await _productService.GetCollectionProductsAsync(collectionId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns variant siblings for a given product (other items in the same VariantGroupId).
+    /// </summary>
+    [HttpGet("{id:int}/variants")]
+    public async Task<IActionResult> GetVariants(int id)
+    {
+        var result = await _productService.GetVariantSiblingsAsync(id);
+        return Ok(result);
     }
 }

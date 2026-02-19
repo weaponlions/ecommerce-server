@@ -47,4 +47,5 @@ public class Collection
 
     // ── Navigation ──
     public MediaAsset? MediaAsset { get; set; }
+    public List<ProductCollection> ProductCollections { get; set; } = [];
 }

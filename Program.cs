@@ -32,6 +32,7 @@ builder.Services.AddScoped<ISocialIconRepository, SocialIconRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryAttributeRepository, CategoryAttributeRepository>();
 builder.Services.AddScoped<IProductAttributeValueRepository, ProductAttributeValueRepository>();
+builder.Services.AddScoped<IProductCollectionRepository, ProductCollectionRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaUsageRepository, MediaUsageRepository>();
 

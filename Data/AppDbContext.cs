@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<CategoryAttribute> CategoryAttributes => Set<CategoryAttribute>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
+    public DbSet<ProductCollection> ProductCollections => Set<ProductCollection>();
     public DbSet<RecentlyVisitedProduct> RecentlyVisitedProducts => Set<RecentlyVisitedProduct>();
 
     // ── Media ──
@@ -52,6 +53,26 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Product>()
             .Property(p => p.OriginalPrice)
             .HasPrecision(18, 2);
+
+        // ── Product Variant Grouping ──
+        modelBuilder.Entity<Product>()
+            .HasIndex(p => p.VariantGroupId);
+
+        // ── ProductCollection (many-to-many join) ──
+        modelBuilder.Entity<ProductCollection>()
+            .HasKey(pc => new { pc.ProductId, pc.CollectionId });
+
+        modelBuilder.Entity<ProductCollection>()
+            .HasOne(pc => pc.Product)
+            .WithMany(p => p.ProductCollections)
+            .HasForeignKey(pc => pc.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductCollection>()
+            .HasOne(pc => pc.Collection)
+            .WithMany(c => c.ProductCollections)
+            .HasForeignKey(pc => pc.CollectionId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // ── Category ──
         modelBuilder.Entity<Category>()

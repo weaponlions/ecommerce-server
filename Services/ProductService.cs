@@ -14,6 +14,7 @@ public class ProductService : IProductService
     private readonly IProductAttributeValueRepository _attrValueRepo;
     private readonly IMediaAssetRepository _mediaAssetRepo;
     private readonly IMediaUsageRepository _mediaUsageRepo;
+    private readonly IProductCollectionRepository _productCollectionRepo;
 
     public ProductService(
         ICategoryRepository categoryRepo,
@@ -21,7 +22,8 @@ public class ProductService : IProductService
         IProductRepository productRepo,
         IProductAttributeValueRepository attrValueRepo,
         IMediaAssetRepository mediaAssetRepo,
-        IMediaUsageRepository mediaUsageRepo)
+        IMediaUsageRepository mediaUsageRepo,
+        IProductCollectionRepository productCollectionRepo)
     {
         _categoryRepo = categoryRepo;
         _attrRepo = attrRepo;
@@ -29,6 +31,7 @@ public class ProductService : IProductService
         _attrValueRepo = attrValueRepo;
         _mediaAssetRepo = mediaAssetRepo;
         _mediaUsageRepo = mediaUsageRepo;
+        _productCollectionRepo = productCollectionRepo;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -181,20 +184,34 @@ public class ProductService : IProductService
                 allProducts = Enumerable.Empty<Product>();
         }
 
+        // ── Collection filter ──
+        if (filter.CollectionId.HasValue)
+        {
+            var collectionProducts = await _productCollectionRepo.GetByCollectionIdAsync(filter.CollectionId.Value);
+            var collectionProductIds = collectionProducts.Select(pc => pc.ProductId).ToHashSet();
+            allProducts = allProducts.Where(p => collectionProductIds.Contains(p.Id));
+        }
+
         // ── Price filter ──
         if (filter.MinPrice.HasValue)
             allProducts = allProducts.Where(p => p.Price >= filter.MinPrice.Value);
         if (filter.MaxPrice.HasValue)
             allProducts = allProducts.Where(p => p.Price <= filter.MaxPrice.Value);
 
-        // ── Text search ──
+        // ── Text search (token-based) ──
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            var search = filter.Search.ToLowerInvariant();
+            var tokens = filter.Search
+                .ToLowerInvariant()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
             allProducts = allProducts.Where(p =>
-                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                (p.Description != null && p.Description.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                (p.CategoryLabel != null && p.CategoryLabel.Contains(search, StringComparison.OrdinalIgnoreCase)));
+                tokens.All(token =>
+                    p.Name.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description != null && p.Description.Contains(token, StringComparison.OrdinalIgnoreCase)) ||
+                    (p.CategoryLabel != null && p.CategoryLabel.Contains(token, StringComparison.OrdinalIgnoreCase)) ||
+                    (p.Badge != null && p.Badge.Contains(token, StringComparison.OrdinalIgnoreCase))
+                ));
         }
 
         var productList = allProducts.ToList();
@@ -249,7 +266,8 @@ public class ProductService : IProductService
             .Take(pageSize)
             .Select(p => new ProductListItemResponse(
                 p.Id, p.Name, p.Price, p.OriginalPrice,
-                p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock
+                p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
+                p.VariantGroupId
             )).ToList();
 
         return new PagedResponse<ProductListItemResponse>(items, totalCount, page, pageSize, totalPages);
@@ -272,7 +290,8 @@ public class ProductService : IProductService
             TrendingScore = req.TrendingScore,
             IsVisible = req.IsVisible,
             CategoryId = req.CategoryId,
-            Stock = req.Stock
+            Stock = req.Stock,
+            VariantGroupId = req.VariantGroupId
         };
 
         var created = await _productRepo.AddAsync(product);
@@ -307,6 +326,7 @@ public class ProductService : IProductService
         product.TrendingScore = req.TrendingScore;
         product.IsVisible = req.IsVisible;
         product.Stock = req.Stock;
+        product.VariantGroupId = req.VariantGroupId;
 
         // ── If category changed, clear old attribute values ──
         if (product.CategoryId != req.CategoryId)
@@ -330,8 +350,73 @@ public class ProductService : IProductService
 
     public async Task<bool> DeleteProductAsync(int id)
     {
+        await _productCollectionRepo.RemoveAllByProductIdAsync(id);
         await _mediaUsageRepo.DeleteByEntityAsync("Product", id);
         return await _productRepo.DeleteAsync(id);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Collection ↔ Product
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<IEnumerable<CollectionProductResponse>> GetCollectionProductsAsync(int collectionId)
+    {
+        var entries = await _productCollectionRepo.GetByCollectionIdAsync(collectionId);
+        return entries.Select(pc => new CollectionProductResponse(
+            pc.ProductId,
+            pc.Product.Name,
+            pc.Product.Price,
+            pc.Product.MediaAssetId,
+            pc.DisplayOrder
+        ));
+    }
+
+    public async Task AddProductToCollectionAsync(int collectionId, AddProductToCollectionRequest request)
+    {
+        var pc = new ProductCollection
+        {
+            ProductId = request.ProductId,
+            CollectionId = collectionId,
+            DisplayOrder = request.DisplayOrder
+        };
+        await _productCollectionRepo.AddAsync(pc);
+    }
+
+    public async Task<bool> RemoveProductFromCollectionAsync(int collectionId, int productId)
+    {
+        var entries = await _productCollectionRepo.GetByCollectionIdAsync(collectionId);
+        var exists = entries.Any(pc => pc.ProductId == productId);
+        if (!exists) return false;
+
+        await _productCollectionRepo.RemoveAsync(productId, collectionId);
+        return true;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Variants
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<IEnumerable<VariantSummary>> GetVariantSiblingsAsync(int productId)
+    {
+        var product = await _productRepo.GetByIdAsync(productId);
+        if (product is null || string.IsNullOrWhiteSpace(product.VariantGroupId))
+            return Enumerable.Empty<VariantSummary>();
+
+        var siblings = (await _productRepo.FindAsync(
+            p => p.VariantGroupId == product.VariantGroupId && p.Id != productId && p.IsVisible
+        )).ToList();
+
+        var result = new List<VariantSummary>();
+        foreach (var sibling in siblings)
+        {
+            var attrValues = await _attrValueRepo.GetByProductIdAsync(sibling.Id);
+            var attrs = attrValues.ToDictionary(
+                v => v.CategoryAttribute.DisplayName,
+                v => v.Value
+            );
+            result.Add(new VariantSummary(sibling.Id, sibling.Name, sibling.Price, sibling.MediaAssetId, attrs));
+        }
+        return result;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -392,10 +477,18 @@ public class ProductService : IProductService
             }
         }
 
+        // Get variant siblings (if this product belongs to a variant group)
+        List<VariantSummary>? variants = null;
+        if (!string.IsNullOrWhiteSpace(p.VariantGroupId))
+        {
+            variants = (await GetVariantSiblingsAsync(p.Id)).ToList();
+            if (variants.Count == 0) variants = null;
+        }
+
         return new ProductDetailResponse(
             p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
             p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
-            p.CategoryId, categoryName, categorySlug, attributes
+            p.CategoryId, categoryName, categorySlug, p.VariantGroupId, variants, attributes
         );
     }
 

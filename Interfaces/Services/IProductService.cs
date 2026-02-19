@@ -25,4 +25,12 @@ public interface IProductService
     Task<ProductDetailResponse> CreateProductAsync(CreateProductRequest request);
     Task<ProductDetailResponse?> UpdateProductAsync(int id, UpdateProductRequest request);
     Task<bool> DeleteProductAsync(int id);
+
+    // ── Collection ↔ Product ──
+    Task<IEnumerable<CollectionProductResponse>> GetCollectionProductsAsync(int collectionId);
+    Task AddProductToCollectionAsync(int collectionId, AddProductToCollectionRequest request);
+    Task<bool> RemoveProductFromCollectionAsync(int collectionId, int productId);
+
+    // ── Variants ──
+    Task<IEnumerable<VariantSummary>> GetVariantSiblingsAsync(int productId);
 }

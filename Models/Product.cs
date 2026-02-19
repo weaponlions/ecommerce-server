@@ -65,6 +65,14 @@ public class Product
     public int Stock { get; set; } = -1;
 
     /// <summary>
+    /// Groups product variants together. Products sharing the same VariantGroupId
+    /// are treated as variants of the same item (e.g., "T-Shirt Red M", "T-Shirt Blue L").
+    /// Null means this product is standalone (not a variant).
+    /// </summary>
+    [MaxLength(50, ErrorMessage = "VariantGroupId cannot exceed 50 characters.")]
+    public string? VariantGroupId { get; set; }
+
+    /// <summary>
     /// FK to MediaAsset — the product's image.
     /// </summary>
     public int? MediaAssetId { get; set; }
@@ -76,4 +84,5 @@ public class Product
     public Category? Category { get; set; }
     public MediaAsset? MediaAsset { get; set; }
     public List<ProductAttributeValue> AttributeValues { get; set; } = [];
+    public List<ProductCollection> ProductCollections { get; set; } = [];
 }

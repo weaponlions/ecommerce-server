@@ -74,6 +74,8 @@ public record ProductDetailResponse(
     int? CategoryId,
     string? CategoryName,
     string? CategorySlug,
+    string? VariantGroupId,
+    List<VariantSummary>? Variants,
     Dictionary<string, object?> Attributes
 );
 
@@ -87,7 +89,8 @@ public record ProductListItemResponse(
     string? Badge,
     double Rating,
     int ReviewCount,
-    int Stock
+    int Stock,
+    string? VariantGroupId
 );
 
 public record CreateProductRequest(
@@ -104,6 +107,7 @@ public record CreateProductRequest(
     bool IsVisible,
     int? CategoryId,
     int Stock,
+    string? VariantGroupId,
     Dictionary<string, string>? Attributes
 );
 
@@ -121,6 +125,7 @@ public record UpdateProductRequest(
     bool IsVisible,
     int? CategoryId,
     int Stock,
+    string? VariantGroupId,
     Dictionary<string, string>? Attributes
 );
 
@@ -131,6 +136,7 @@ public record UpdateProductRequest(
 public record ProductFilterRequest(
     int? CategoryId,
     string? CategorySlug,
+    int? CollectionId,
     decimal? MinPrice,
     decimal? MaxPrice,
     string? Search,
@@ -147,4 +153,36 @@ public record PagedResponse<T>(
     int Page,
     int PageSize,
     int TotalPages
+);
+
+// ════════════════════════════════════════════════════════════════
+//  Variant DTOs
+// ════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Lightweight summary of a sibling variant shown on a product detail page.
+/// </summary>
+public record VariantSummary(
+    int Id,
+    string Name,
+    decimal Price,
+    int? MediaAssetId,
+    Dictionary<string, string> DifferingAttributes
+);
+
+// ════════════════════════════════════════════════════════════════
+//  Collection-Product DTOs
+// ════════════════════════════════════════════════════════════════
+
+public record AddProductToCollectionRequest(
+    int ProductId,
+    int DisplayOrder
+);
+
+public record CollectionProductResponse(
+    int ProductId,
+    string ProductName,
+    decimal Price,
+    int? MediaAssetId,
+    int DisplayOrder
 );

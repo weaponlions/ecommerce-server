@@ -26,6 +26,10 @@ public interface IProductService
     Task<ProductDetailResponse?> UpdateProductAsync(int id, UpdateProductRequest request);
     Task<bool> DeleteProductAsync(int id);
 
+    // ── Collections ──
+    Task<IEnumerable<CollectionDto>> GetActiveCollectionsAsync();
+    Task<CollectionDto?> GetCollectionByIdAsync(int id);
+
     // ── Collection ↔ Product ──
     Task<IEnumerable<CollectionProductResponse>> GetCollectionProductsAsync(int collectionId);
     Task AddProductToCollectionAsync(int collectionId, AddProductToCollectionRequest request);

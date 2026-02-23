@@ -88,6 +88,23 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
+    /// Returns all active collections.
+    /// </summary>
+    [HttpGet("collections")]
+    public async Task<IActionResult> GetCollections()
+        => Ok(await _productService.GetActiveCollectionsAsync());
+
+    /// <summary>
+    /// Returns a single collection by ID.
+    /// </summary>
+    [HttpGet("collections/{id:int}")]
+    public async Task<IActionResult> GetCollection(int id)
+    {
+        var result = await _productService.GetCollectionByIdAsync(id);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
     /// Returns all products belonging to a specific collection.
     /// </summary>
     [HttpGet("collections/{collectionId:int}/products")]

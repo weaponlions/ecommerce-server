@@ -17,8 +17,11 @@ builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning); //
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).EnableSensitiveDataLogging(false));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).EnableSensitiveDataLogging(false));
+}
 
 // ── Repositories (scoped) ──
 builder.Services.AddScoped<IDashboardSectionRepository, DashboardSectionRepository>();
@@ -87,4 +90,11 @@ app.UseCors();
 // ── Map controllers ──
 app.MapControllers();
 
+app.MapGet("/", () =>
+    Results.Content(
+        "Server is running move to <a href=\"/swagger\">/swagger</a>",
+        "text/html"));
+
 app.Run();
+
+public partial class Program { }

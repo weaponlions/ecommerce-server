@@ -15,6 +15,7 @@ public class ProductService : IProductService
     private readonly IMediaAssetRepository _mediaAssetRepo;
     private readonly IMediaUsageRepository _mediaUsageRepo;
     private readonly IProductCollectionRepository _productCollectionRepo;
+    private readonly ICollectionRepository _collectionRepo;
 
     public ProductService(
         ICategoryRepository categoryRepo,
@@ -23,7 +24,8 @@ public class ProductService : IProductService
         IProductAttributeValueRepository attrValueRepo,
         IMediaAssetRepository mediaAssetRepo,
         IMediaUsageRepository mediaUsageRepo,
-        IProductCollectionRepository productCollectionRepo)
+        IProductCollectionRepository productCollectionRepo,
+        ICollectionRepository collectionRepo)
     {
         _categoryRepo = categoryRepo;
         _attrRepo = attrRepo;
@@ -32,6 +34,7 @@ public class ProductService : IProductService
         _mediaAssetRepo = mediaAssetRepo;
         _mediaUsageRepo = mediaUsageRepo;
         _productCollectionRepo = productCollectionRepo;
+        _collectionRepo = collectionRepo;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -353,6 +356,30 @@ public class ProductService : IProductService
         await _productCollectionRepo.RemoveAllByProductIdAsync(id);
         await _mediaUsageRepo.DeleteByEntityAsync("Product", id);
         return await _productRepo.DeleteAsync(id);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Collections
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<IEnumerable<CollectionDto>> GetActiveCollectionsAsync()
+    {
+        var collections = (await _collectionRepo.GetAllAsync())
+            .Where(c => c.IsVisible)
+            .OrderBy(c => c.DisplayOrder);
+        return collections.Select(c => new CollectionDto(
+            c.Id, c.Name, c.Description, c.MediaAssetId, c.LinkUrl, c.VisitCount
+        ));
+    }
+
+    public async Task<CollectionDto?> GetCollectionByIdAsync(int id)
+    {
+        var collection = await _collectionRepo.GetByIdAsync(id);
+        if (collection is null || !collection.IsVisible) return null;
+        return new CollectionDto(
+            collection.Id, collection.Name, collection.Description,
+            collection.MediaAssetId, collection.LinkUrl, collection.VisitCount
+        );
     }
 
     // ════════════════════════════════════════════════════════════════

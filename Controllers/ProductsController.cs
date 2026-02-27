@@ -114,13 +114,5 @@ public class ProductsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Returns variant siblings for a given product (other items in the same VariantGroupId).
-    /// </summary>
-    [HttpGet("{id:int}/variants")]
-    public async Task<IActionResult> GetVariants(int id)
-    {
-        var result = await _productService.GetVariantSiblingsAsync(id);
-        return Ok(result);
-    }
+
 }

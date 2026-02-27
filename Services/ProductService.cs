@@ -16,6 +16,7 @@ public class ProductService : IProductService
     private readonly IMediaUsageRepository _mediaUsageRepo;
     private readonly IProductCollectionRepository _productCollectionRepo;
     private readonly ICollectionRepository _collectionRepo;
+    private readonly IProductImageRepository _productImageRepo;
 
     public ProductService(
         ICategoryRepository categoryRepo,
@@ -25,7 +26,8 @@ public class ProductService : IProductService
         IMediaAssetRepository mediaAssetRepo,
         IMediaUsageRepository mediaUsageRepo,
         IProductCollectionRepository productCollectionRepo,
-        ICollectionRepository collectionRepo)
+        ICollectionRepository collectionRepo,
+        IProductImageRepository productImageRepo)
     {
         _categoryRepo = categoryRepo;
         _attrRepo = attrRepo;
@@ -35,6 +37,7 @@ public class ProductService : IProductService
         _mediaUsageRepo = mediaUsageRepo;
         _productCollectionRepo = productCollectionRepo;
         _collectionRepo = collectionRepo;
+        _productImageRepo = productImageRepo;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -269,23 +272,31 @@ public class ProductService : IProductService
             .Take(pageSize)
             .Select(p => new ProductListItemResponse(
                 p.Id, p.Name, p.Price, p.OriginalPrice,
-                p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
-                p.VariantGroupId
+                p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
+                null
             )).ToList();
 
-        return new PagedResponse<ProductListItemResponse>(items, totalCount, page, pageSize, totalPages);
+        // ── Load images for the current page ──
+        var productIds = items.Select(i => i.Id).ToList();
+        var imagesRaw = await _productImageRepo.FindAsync(pi => productIds.Contains(pi.ProductId));
+        var imagesGrouped = imagesRaw.GroupBy(pi => pi.ProductId).ToDictionary(g => g.Key, g => g.OrderBy(pi => pi.DisplayOrder).ToList());
+
+        var finalItems = items.Select(p => p with
+        {
+            Images = imagesGrouped.TryGetValue(p.Id, out var images) 
+                        ? images.Select(MapProductImage).ToList() 
+                        : null
+        }).ToList();
+
+        return new PagedResponse<ProductListItemResponse>(finalItems, totalCount, page, pageSize, totalPages);
     }
 
     public async Task<ProductDetailResponse> CreateProductAsync(CreateProductRequest req)
     {
-        // Validate the media asset exists
-        await ValidateMediaAsset(req.MediaAssetId);
-
         var product = new Product(req.Name, req.Price)
         {
             Description = req.Description,
             OriginalPrice = req.OriginalPrice,
-            MediaAssetId = req.MediaAssetId,
             CategoryLabel = req.CategoryLabel,
             Badge = req.Badge,
             Rating = req.Rating,
@@ -293,17 +304,21 @@ public class ProductService : IProductService
             TrendingScore = req.TrendingScore,
             IsVisible = req.IsVisible,
             CategoryId = req.CategoryId,
-            Stock = req.Stock,
-            VariantGroupId = req.VariantGroupId
+            Stock = req.Stock
         };
 
         var created = await _productRepo.AddAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "MediaAssetId");
 
         // ── Save attribute values ──
         if (req.CategoryId.HasValue && req.Attributes != null)
         {
             await SaveAttributeValues(created.Id, req.CategoryId.Value, req.Attributes);
+        }
+
+        // ── Save product images ──
+        if (req.Images != null && req.Images.Count > 0)
+        {
+            await SaveProductImages(created.Id, req.Images);
         }
 
         return (await BuildProductDetail(created))!;
@@ -314,14 +329,10 @@ public class ProductService : IProductService
         var product = await _productRepo.GetByIdAsync(id);
         if (product is null) return null;
 
-        // Validate the media asset exists
-        await ValidateMediaAsset(req.MediaAssetId);
-
         product.Name = req.Name;
         product.Description = req.Description;
         product.Price = req.Price;
         product.OriginalPrice = req.OriginalPrice;
-        product.MediaAssetId = req.MediaAssetId;
         product.CategoryLabel = req.CategoryLabel;
         product.Badge = req.Badge;
         product.Rating = req.Rating;
@@ -329,7 +340,6 @@ public class ProductService : IProductService
         product.TrendingScore = req.TrendingScore;
         product.IsVisible = req.IsVisible;
         product.Stock = req.Stock;
-        product.VariantGroupId = req.VariantGroupId;
 
         // ── If category changed, clear old attribute values ──
         if (product.CategoryId != req.CategoryId)
@@ -339,7 +349,6 @@ public class ProductService : IProductService
         }
 
         await _productRepo.UpdateAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", id, "MediaAssetId");
 
         // ── Save new attribute values ──
         if (req.CategoryId.HasValue && req.Attributes != null)
@@ -393,7 +402,6 @@ public class ProductService : IProductService
             pc.ProductId,
             pc.Product.Name,
             pc.Product.Price,
-            pc.Product.MediaAssetId,
             pc.DisplayOrder
         ));
     }
@@ -419,32 +427,6 @@ public class ProductService : IProductService
         return true;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Variants
-    // ════════════════════════════════════════════════════════════════
-
-    public async Task<IEnumerable<VariantSummary>> GetVariantSiblingsAsync(int productId)
-    {
-        var product = await _productRepo.GetByIdAsync(productId);
-        if (product is null || string.IsNullOrWhiteSpace(product.VariantGroupId))
-            return Enumerable.Empty<VariantSummary>();
-
-        var siblings = (await _productRepo.FindAsync(
-            p => p.VariantGroupId == product.VariantGroupId && p.Id != productId && p.IsVisible
-        )).ToList();
-
-        var result = new List<VariantSummary>();
-        foreach (var sibling in siblings)
-        {
-            var attrValues = await _attrValueRepo.GetByProductIdAsync(sibling.Id);
-            var attrs = attrValues.ToDictionary(
-                v => v.CategoryAttribute.DisplayName,
-                v => v.Value
-            );
-            result.Add(new VariantSummary(sibling.Id, sibling.Name, sibling.Price, sibling.MediaAssetId, attrs));
-        }
-        return result;
-    }
 
     // ════════════════════════════════════════════════════════════════
     //  Private Helpers
@@ -504,18 +486,14 @@ public class ProductService : IProductService
             }
         }
 
-        // Get variant siblings (if this product belongs to a variant group)
-        List<VariantSummary>? variants = null;
-        if (!string.IsNullOrWhiteSpace(p.VariantGroupId))
-        {
-            variants = (await GetVariantSiblingsAsync(p.Id)).ToList();
-            if (variants.Count == 0) variants = null;
-        }
+        // Get product images
+        var imagesRaw = await _productImageRepo.GetByProductIdAsync(p.Id);
+        var images = imagesRaw.Any() ? imagesRaw.Select(MapProductImage).ToList() : null;
 
         return new ProductDetailResponse(
             p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
-            p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
-            p.CategoryId, categoryName, categorySlug, p.VariantGroupId, variants, attributes
+            p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
+            p.CategoryId, categoryName, categorySlug, images, attributes
         );
     }
 
@@ -637,5 +615,69 @@ public class ProductService : IProductService
 
         throw new ArgumentException(
             $"Invalid DataType: '{dataType}'. Valid values: String, Number, Select, MultiSelect, Boolean");
+    }
+
+    private static ProductImageDto MapProductImage(ProductImage pi)
+    {
+        MediaAssetResponse? asset = pi.MediaAsset != null 
+            ? new MediaAssetResponse(
+                pi.MediaAsset.Id, pi.MediaAsset.FileName, pi.MediaAsset.OriginalFileName, pi.MediaAsset.ContentType,
+                pi.MediaAsset.FileSizeBytes, FormatFileSize(pi.MediaAsset.FileSizeBytes),
+                pi.MediaAsset.Width, pi.MediaAsset.Height, pi.MediaAsset.Url, pi.MediaAsset.AltText, pi.MediaAsset.Title,
+                pi.MediaAsset.Category, pi.MediaAsset.CreatedAt, pi.MediaAsset.UpdatedAt, pi.MediaAsset.Usages?.Count ?? 0)
+            : null;
+
+        return new ProductImageDto(pi.Id, pi.MediaAssetId, asset, pi.Role, pi.DisplayOrder, pi.AltText, pi.IsActive);
+    }
+
+    private static string FormatFileSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F1} GB"
+    };
+
+    private async Task SaveProductImages(int productId, List<UpsertProductImageRequest> requests)
+    {
+        var existingImages = await _productImageRepo.GetByProductIdAsync(productId);
+        
+        // Remove images no longer in the request
+        var requestedIds = requests.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToHashSet();
+        var toRemove = existingImages.Where(e => !requestedIds.Contains(e.Id));
+        foreach (var img in toRemove)
+        {
+            await _productImageRepo.DeleteAsync(img.Id);
+            await _mediaUsageRepo.DeleteByEntityAsync("ProductImage", img.Id);
+        }
+
+        foreach (var req in requests)
+        {
+            await ValidateMediaAsset(req.MediaAssetId);
+
+            if (req.Id.HasValue && req.Id.Value > 0)
+            {
+                var existing = existingImages.FirstOrDefault(e => e.Id == req.Id.Value);
+                if (existing != null)
+                {
+                    existing.MediaAssetId = req.MediaAssetId;
+                    existing.Role = req.Role;
+                    existing.DisplayOrder = req.DisplayOrder;
+                    existing.AltText = req.AltText;
+                    existing.IsActive = req.IsActive;
+                    await _productImageRepo.UpdateAsync(existing);
+                    await TrackMediaUsage(req.MediaAssetId, "ProductImage", existing.Id, "MediaAssetId");
+                    continue;
+                }
+            }
+
+            var newImage = new ProductImage(productId, req.MediaAssetId, req.Role, req.DisplayOrder)
+            {
+                AltText = req.AltText,
+                IsActive = req.IsActive
+            };
+            var created = await _productImageRepo.AddAsync(newImage);
+            await TrackMediaUsage(req.MediaAssetId, "ProductImage", created.Id, "MediaAssetId");
+        }
     }
 }

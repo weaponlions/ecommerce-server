@@ -149,6 +149,7 @@ public class DashboardService : IDashboardService
         var slides = await _carouselRepo.GetActiveSlidesAsync(DateTime.UtcNow);
         return slides.Select(s => new CarouselSlideDto(
             s.Id, s.Title, s.Subtitle, s.MediaAssetId,
+            MapMedia(s.MediaAsset),
             s.LinkUrl, s.ButtonText, s.DisplayOrder
         )).ToList();
     }
@@ -158,7 +159,7 @@ public class DashboardService : IDashboardService
         var products = await _productRepo.GetTrendingAsync(MaxTrendingProducts);
         return products.Select(p => new ProductDto(
             p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
-            p.MediaAssetId, p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount
+            p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount
         )).ToList();
     }
 
@@ -167,7 +168,7 @@ public class DashboardService : IDashboardService
         var visits = await _recentlyVisitedRepo.GetByUserAsync(userId, MaxRecentlyVisited);
         return visits.Select(r => new ProductDto(
             r.Product.Id, r.Product.Name, r.Product.Description,
-            r.Product.Price, r.Product.OriginalPrice, r.Product.MediaAssetId,
+            r.Product.Price, r.Product.OriginalPrice,
             r.Product.CategoryLabel, r.Product.Badge, r.Product.Rating, r.Product.ReviewCount
         )).ToList();
     }
@@ -196,4 +197,23 @@ public class DashboardService : IDashboardService
 
         return new FooterDto(groups, socials);
     }
+
+    private static MediaAssetResponse? MapMedia(MediaAsset? asset)
+    {
+        if (asset is null) return null;
+        return new MediaAssetResponse(
+            asset.Id, asset.FileName, asset.OriginalFileName, asset.ContentType,
+            asset.FileSizeBytes, FormatFileSize(asset.FileSizeBytes),
+            asset.Width, asset.Height, asset.Url, asset.AltText, asset.Title,
+            asset.Category, asset.CreatedAt, asset.UpdatedAt, asset.Usages?.Count ?? 0
+        );
+    }
+
+    private static string FormatFileSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F1} GB"
+    };
 }

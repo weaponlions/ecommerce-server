@@ -38,6 +38,7 @@ builder.Services.AddScoped<IProductAttributeValueRepository, ProductAttributeVal
 builder.Services.AddScoped<IProductCollectionRepository, ProductCollectionRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaUsageRepository, MediaUsageRepository>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 
 // ── Services (scoped) ──
 builder.Services.AddScoped<IDashboardService, DashboardService>();

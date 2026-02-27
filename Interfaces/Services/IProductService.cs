@@ -35,6 +35,4 @@ public interface IProductService
     Task AddProductToCollectionAsync(int collectionId, AddProductToCollectionRequest request);
     Task<bool> RemoveProductFromCollectionAsync(int collectionId, int productId);
 
-    // ── Variants ──
-    Task<IEnumerable<VariantSummary>> GetVariantSiblingsAsync(int productId);
 }

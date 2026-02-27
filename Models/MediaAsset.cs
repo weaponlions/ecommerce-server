@@ -95,5 +95,6 @@ public class MediaAsset
     public DateTime? UpdatedAt { get; set; }
 
     // ── Navigation ──
+    [System.Text.Json.Serialization.JsonIgnore]
     public List<MediaUsage> Usages { get; set; } = [];
 }

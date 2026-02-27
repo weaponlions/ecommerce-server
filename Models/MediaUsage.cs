@@ -36,5 +36,6 @@ public class MediaUsage
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // ── Navigation ──
+    [System.Text.Json.Serialization.JsonIgnore]
     public MediaAsset MediaAsset { get; set; } = null!;
 }

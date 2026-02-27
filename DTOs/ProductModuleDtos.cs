@@ -59,13 +59,31 @@ public record UpsertCategoryAttributeRequest(
 //  Product Module DTOs (extended)
 // ══════════════════════════════════════════════════════════════
 
+public record ProductImageDto(
+    int Id,
+    int MediaAssetId,
+    MediaAssetResponse? MediaAsset,
+    string Role,
+    int DisplayOrder,
+    string? AltText,
+    bool IsActive
+);
+
+public record UpsertProductImageRequest(
+    int? Id, // Null when creating new image
+    int MediaAssetId,
+    string Role,
+    int DisplayOrder,
+    string? AltText,
+    bool IsActive
+);
+
 public record ProductDetailResponse(
     int Id,
     string Name,
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,
     double Rating,
@@ -74,8 +92,7 @@ public record ProductDetailResponse(
     int? CategoryId,
     string? CategoryName,
     string? CategorySlug,
-    string? VariantGroupId,
-    List<VariantSummary>? Variants,
+    List<ProductImageDto>? Images,
     Dictionary<string, object?> Attributes
 );
 
@@ -84,13 +101,12 @@ public record ProductListItemResponse(
     string Name,
     decimal Price,
     decimal? OriginalPrice,
-    int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,
     double Rating,
     int ReviewCount,
     int Stock,
-    string? VariantGroupId
+    List<ProductImageDto>? Images
 );
 
 public record CreateProductRequest(
@@ -98,7 +114,6 @@ public record CreateProductRequest(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    int MediaAssetId,          // ← references uploaded media asset
     string? CategoryLabel,
     string? Badge,
     double Rating,
@@ -107,8 +122,8 @@ public record CreateProductRequest(
     bool IsVisible,
     int? CategoryId,
     int Stock,
-    string? VariantGroupId,
-    Dictionary<string, string>? Attributes
+    Dictionary<string, string>? Attributes,
+    List<UpsertProductImageRequest>? Images
 );
 
 public record UpdateProductRequest(
@@ -116,7 +131,6 @@ public record UpdateProductRequest(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    int MediaAssetId,          // ← references uploaded media asset
     string? CategoryLabel,
     string? Badge,
     double Rating,
@@ -125,8 +139,8 @@ public record UpdateProductRequest(
     bool IsVisible,
     int? CategoryId,
     int Stock,
-    string? VariantGroupId,
-    Dictionary<string, string>? Attributes
+    Dictionary<string, string>? Attributes,
+    List<UpsertProductImageRequest>? Images
 );
 
 // ══════════════════════════════════════════════════════════════
@@ -155,20 +169,7 @@ public record PagedResponse<T>(
     int TotalPages
 );
 
-// ════════════════════════════════════════════════════════════════
-//  Variant DTOs
-// ════════════════════════════════════════════════════════════════
 
-/// <summary>
-/// Lightweight summary of a sibling variant shown on a product detail page.
-/// </summary>
-public record VariantSummary(
-    int Id,
-    string Name,
-    decimal Price,
-    int? MediaAssetId,
-    Dictionary<string, string> DifferingAttributes
-);
 
 // ════════════════════════════════════════════════════════════════
 //  Collection-Product DTOs
@@ -183,6 +184,5 @@ public record CollectionProductResponse(
     int ProductId,
     string ProductName,
     decimal Price,
-    int? MediaAssetId,
     int DisplayOrder
 );

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eShopServer.Data;
 
@@ -11,9 +12,11 @@ using eShopServer.Data;
 namespace eShopServer.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260226185755_AddProductImages")]
+    partial class AddProductImages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -431,6 +434,9 @@ namespace eShopServer.Data.Migrations
                     b.Property<bool>("IsVisible")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("MediaAssetId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -456,9 +462,17 @@ namespace eShopServer.Data.Migrations
                     b.Property<int>("TrendingScore")
                         .HasColumnType("int");
 
+                    b.Property<string>("VariantGroupId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("MediaAssetId");
+
+                    b.HasIndex("VariantGroupId");
 
                     b.ToTable("Products");
                 });
@@ -683,7 +697,14 @@ namespace eShopServer.Data.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("eShopServer.Models.MediaAsset", "MediaAsset")
+                        .WithMany()
+                        .HasForeignKey("MediaAssetId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Category");
+
+                    b.Navigation("MediaAsset");
                 });
 
             modelBuilder.Entity("eShopServer.Models.ProductAttributeValue", b =>

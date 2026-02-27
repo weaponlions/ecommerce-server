@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<CategoryAttribute> CategoryAttributes => Set<CategoryAttribute>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<ProductAttributeValue> ProductAttributeValues => Set<ProductAttributeValue>();
     public DbSet<ProductCollection> ProductCollections => Set<ProductCollection>();
     public DbSet<RecentlyVisitedProduct> RecentlyVisitedProducts => Set<RecentlyVisitedProduct>();
@@ -54,9 +55,19 @@ public class AppDbContext : DbContext
             .Property(p => p.OriginalPrice)
             .HasPrecision(18, 2);
 
-        // ── Product Variant Grouping ──
-        modelBuilder.Entity<Product>()
-            .HasIndex(p => p.VariantGroupId);
+
+        // ── Product Images ──
+        modelBuilder.Entity<ProductImage>()
+            .HasOne(pi => pi.Product)
+            .WithMany(p => p.Images)
+            .HasForeignKey(pi => pi.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductImage>()
+            .HasOne(pi => pi.MediaAsset)
+            .WithMany()
+            .HasForeignKey(pi => pi.MediaAssetId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // ── ProductCollection (many-to-many join) ──
         modelBuilder.Entity<ProductCollection>()
@@ -145,11 +156,6 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.MediaAssetId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        modelBuilder.Entity<Product>()
-            .HasOne(p => p.MediaAsset)
-            .WithMany()
-            .HasForeignKey(p => p.MediaAssetId)
-            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Category>()
             .HasOne(c => c.MediaAsset)

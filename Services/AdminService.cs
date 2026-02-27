@@ -115,7 +115,7 @@ public class AdminService : IAdminService
         if (req.MediaAssetId.HasValue)
             await TrackMediaUsage(req.MediaAssetId.Value, "CarouselSlide", created.Id, "MediaAssetId");
 
-        return created;
+        return await _carouselRepo.GetByIdAsync(created.Id) ?? created;
     }
 
     public async Task<CarouselSlide?> UpdateCarouselSlideAsync(int id, UpsertCarouselSlideRequest req)
@@ -138,7 +138,7 @@ public class AdminService : IAdminService
         if (req.MediaAssetId.HasValue)
             await TrackMediaUsage(req.MediaAssetId.Value, "CarouselSlide", id, "MediaAssetId");
 
-        return updated;
+        return await _carouselRepo.GetByIdAsync(id) ?? updated;
     }
 
     public async Task<bool> DeleteCarouselSlideAsync(int id)
@@ -156,19 +156,14 @@ public class AdminService : IAdminService
 
     public async Task<Product> CreateProductAsync(UpsertProductRequest req)
     {
-        // Validate the media asset exists
-        await ValidateMediaAsset(req.MediaAssetId);
-
         var product = new Product(req.Name, req.Price)
         {
             Description = req.Description, OriginalPrice = req.OriginalPrice,
-            MediaAssetId = req.MediaAssetId,
             CategoryLabel = req.CategoryLabel, Badge = req.Badge, Rating = req.Rating,
             ReviewCount = req.ReviewCount, TrendingScore = req.TrendingScore, IsVisible = req.IsVisible
         };
 
         var created = await _productRepo.AddAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", created.Id, "MediaAssetId");
         return created;
     }
 
@@ -177,16 +172,12 @@ public class AdminService : IAdminService
         var product = await _productRepo.GetByIdAsync(id);
         if (product is null) return null;
 
-        // Validate the media asset exists
-        await ValidateMediaAsset(req.MediaAssetId);
-
         product.Name = req.Name; product.Description = req.Description; product.Price = req.Price;
-        product.OriginalPrice = req.OriginalPrice; product.MediaAssetId = req.MediaAssetId;
+        product.OriginalPrice = req.OriginalPrice; 
         product.CategoryLabel = req.CategoryLabel; product.Badge = req.Badge; product.Rating = req.Rating;
         product.ReviewCount = req.ReviewCount; product.TrendingScore = req.TrendingScore; product.IsVisible = req.IsVisible;
 
         var updated = await _productRepo.UpdateAsync(product);
-        await TrackMediaUsage(req.MediaAssetId, "Product", id, "MediaAssetId");
         return updated;
     }
 

@@ -32,6 +32,7 @@ public record CarouselSlideDto(
     string Title,
     string? Subtitle,
     int? MediaAssetId,
+    MediaAssetResponse? MediaAsset,
     string? LinkUrl,
     string? ButtonText,
     int DisplayOrder
@@ -45,7 +46,6 @@ public record ProductDto(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    int? MediaAssetId,
     string? CategoryLabel,
     string? Badge,
     double Rating,
@@ -129,7 +129,6 @@ public record UpsertProductRequest(
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
-    int MediaAssetId,          // ← references uploaded media asset
     string? CategoryLabel,
     string? Badge,
     double Rating,

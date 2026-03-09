@@ -9,6 +9,10 @@ public class ProductRepository : Repository<Product>, IProductRepository
 {
     public ProductRepository(AppDbContext context) : base(context) { }
 
+    public async Task<Product?> GetBySlugAsync(string slug)
+        => await _dbSet
+            .FirstOrDefaultAsync(p => p.Slug == slug);
+
     public async Task<IEnumerable<Product>> GetTrendingAsync(int limit)
         => await _dbSet
             .Where(p => p.IsVisible)

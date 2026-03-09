@@ -81,6 +81,8 @@ public record UpsertProductImageRequest(
 public record ProductDetailResponse(
     int Id,
     string Name,
+    string Slug,
+    string Sku,
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
@@ -99,6 +101,8 @@ public record ProductDetailResponse(
 public record ProductListItemResponse(
     int Id,
     string Name,
+    string Slug,
+    string Sku,
     decimal Price,
     decimal? OriginalPrice,
     string? CategoryLabel,
@@ -111,6 +115,8 @@ public record ProductListItemResponse(
 
 public record CreateProductRequest(
     string Name,
+    string? Slug,
+    string? Sku,
     string? Description,
     decimal Price,
     decimal? OriginalPrice,
@@ -128,6 +134,8 @@ public record CreateProductRequest(
 
 public record UpdateProductRequest(
     string Name,
+    string? Slug,
+    string? Sku,
     string? Description,
     decimal Price,
     decimal? OriginalPrice,

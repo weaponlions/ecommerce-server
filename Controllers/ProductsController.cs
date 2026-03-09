@@ -80,10 +80,10 @@ public class ProductsController : ControllerBase
     /// <summary>
     /// Returns a single product with its category attributes and variant siblings.
     /// </summary>
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetProduct(int id)
+    [HttpGet("{slug}")]
+    public async Task<IActionResult> GetProduct(string slug)
     {
-        var result = await _productService.GetProductByIdAsync(id);
+        var result = await _productService.GetProductBySlugAsync(slug);
         return result is null ? NotFound() : Ok(result);
     }
 

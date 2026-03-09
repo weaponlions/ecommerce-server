@@ -20,6 +20,7 @@ public interface IProductService
     Task<bool> DeleteCategoryAttributeAsync(int attributeId);
 
     // ── Products ──
+    Task<ProductDetailResponse?> GetProductBySlugAsync(string slug);
     Task<ProductDetailResponse?> GetProductByIdAsync(int id);
     Task<PagedResponse<ProductListItemResponse>> GetProductsAsync(ProductFilterRequest filter);
     Task<ProductDetailResponse> CreateProductAsync(CreateProductRequest request);

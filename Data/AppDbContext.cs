@@ -55,6 +55,15 @@ public class AppDbContext : DbContext
             .Property(p => p.OriginalPrice)
             .HasPrecision(18, 2);
 
+        // ── Product Slug & Sku ──
+        modelBuilder.Entity<Product>()
+            .HasIndex(p => p.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<Product>()
+            .HasIndex(p => p.Sku)
+            .IsUnique();
+
 
         // ── Product Images ──
         modelBuilder.Entity<ProductImage>()

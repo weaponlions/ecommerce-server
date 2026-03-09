@@ -26,6 +26,14 @@ public class Product
     [MaxLength(200, ErrorMessage = "Name cannot exceed 200 characters.")]
     public string Name { get; set; } = string.Empty;
 
+    [Required]
+    [MaxLength(200, ErrorMessage = "Slug cannot exceed 200 characters.")]
+    public string Slug { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(100, ErrorMessage = "SKU cannot exceed 100 characters.")]
+    public string Sku { get; set; } = string.Empty;
+
     [MaxLength(2000, ErrorMessage = "Description cannot exceed 2000 characters.")]
     public string? Description { get; set; }
 

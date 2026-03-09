@@ -12,6 +12,22 @@ builder.Logging.AddConsole();
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning); // optional: all EF logs
 
+// ── Rate Limiting & Compression (Production) ──
+builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
+builder.Services.AddRateLimiter(options => {
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: partition => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                QueueLimit = 2,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 
 // ── Database (MySQL via Pomelo) ──
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -20,7 +36,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)).EnableSensitiveDataLogging(false));
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), 
+            mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3, 
+                maxRetryDelay: TimeSpan.FromSeconds(5), 
+                errorNumbersToAdd: null))
+            .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
 }
 
 // ── Repositories (scoped) ──
@@ -51,12 +72,20 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // ── CORS ──
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        if (builder.Environment.IsDevelopment() || allowedOrigins.Length == 0)
+        {
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        }
+    });
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -66,19 +95,24 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    if (db.Database.IsRelational())
+    {
+        db.Database.Migrate();
+    }
 }
 
 // ── Seed database ──
-// using (var scope = app.Services.CreateScope())
-// {
-//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//     db.Database.EnsureCreated();
-//     SeedData.Initialize(db);
-// }
+using (var scope = app.Services.CreateScope())
+{
+    // var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // db.Database.EnsureCreated();
+    // SeedData.Initialize(db);
+}
 
 // ── Middleware ──
 app.UseGlobalExceptionHandler(); // Must be first — catches all downstream exceptions
+app.UseResponseCompression();
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {

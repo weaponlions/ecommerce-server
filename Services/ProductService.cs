@@ -1,8 +1,10 @@
-using System.Text.Json;
 using eShopServer.DTOs;
 using eShopServer.Interfaces.Repositories;
 using eShopServer.Interfaces.Services;
 using eShopServer.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace eShopServer.Services;
 
@@ -166,6 +168,13 @@ public class ProductService : IProductService
     //  Products
     // ════════════════════════════════════════════════════════════════
 
+    public async Task<ProductDetailResponse?> GetProductBySlugAsync(string slug)
+    {
+        var product = await _productRepo.GetBySlugAsync(slug);
+        if (product is null) return null;
+        return await BuildProductDetail(product);
+    }
+
     public async Task<ProductDetailResponse?> GetProductByIdAsync(int id)
     {
         var product = await _productRepo.GetByIdAsync(id);
@@ -271,7 +280,7 @@ public class ProductService : IProductService
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new ProductListItemResponse(
-                p.Id, p.Name, p.Price, p.OriginalPrice,
+                p.Id, p.Name, p.Slug, p.Sku, p.Price, p.OriginalPrice,
                 p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
                 null
             )).ToList();
@@ -293,8 +302,14 @@ public class ProductService : IProductService
 
     public async Task<ProductDetailResponse> CreateProductAsync(CreateProductRequest req)
     {
+        string baseSlug = !string.IsNullOrWhiteSpace(req.Slug) ? GenerateSlug(req.Slug) : GenerateSlug(req.Name);
+        string slug = await EnsureUniqueSlugAsync(baseSlug);
+        string sku = !string.IsNullOrWhiteSpace(req.Sku) ? req.Sku : GenerateSku();
+
         var product = new Product(req.Name, req.Price)
         {
+            Slug = slug,
+            Sku = sku,
             Description = req.Description,
             OriginalPrice = req.OriginalPrice,
             CategoryLabel = req.CategoryLabel,
@@ -329,6 +344,24 @@ public class ProductService : IProductService
         var product = await _productRepo.GetByIdAsync(id);
         if (product is null) return null;
 
+        if (!string.IsNullOrWhiteSpace(req.Slug))
+        {
+            string newSlug = GenerateSlug(req.Slug);
+            if (newSlug != product.Slug)
+            {
+                product.Slug = await EnsureUniqueSlugAsync(newSlug, id);
+            }
+        }
+        else if (req.Name != product.Name && string.IsNullOrWhiteSpace(req.Slug))
+        {
+             // optionally auto-update slug if name changes and slug isn't provided, but maybe keep old slug. Let's keep old slug.
+        }
+
+        if (!string.IsNullOrWhiteSpace(req.Sku))
+        {
+            product.Sku = req.Sku;
+        }
+
         product.Name = req.Name;
         product.Description = req.Description;
         product.Price = req.Price;
@@ -356,6 +389,13 @@ public class ProductService : IProductService
             await _attrValueRepo.DeleteByProductIdAsync(id);
             await SaveAttributeValues(id, req.CategoryId.Value, req.Attributes);
         }
+        // ── Save product images ──
+        if (req.Images != null && req.Images.Count > 0)
+        {
+            await SaveProductImages(id, req.Images);
+        }
+
+
 
         return await BuildProductDetail(product);
     }
@@ -491,7 +531,7 @@ public class ProductService : IProductService
         var images = imagesRaw.Any() ? imagesRaw.Select(MapProductImage).ToList() : null;
 
         return new ProductDetailResponse(
-            p.Id, p.Name, p.Description, p.Price, p.OriginalPrice,
+            p.Id, p.Name, p.Slug, p.Sku, p.Description, p.Price, p.OriginalPrice,
             p.CategoryLabel, p.Badge, p.Rating, p.ReviewCount, p.Stock,
             p.CategoryId, categoryName, categorySlug, images, attributes
         );
@@ -637,6 +677,35 @@ public class ProductService : IProductService
         < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
         _ => $"{bytes / (1024.0 * 1024 * 1024):F1} GB"
     };
+
+    private string GenerateSlug(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "";
+        string slug = name.ToLowerInvariant();
+        slug = Regex.Replace(slug, @"[^a-z0-9\s-]", "");
+        slug = Regex.Replace(slug, @"\s+", "-").Trim('-');
+        return slug;
+    }
+
+    private async Task<string> EnsureUniqueSlugAsync(string slug, int? excludeId = null)
+    {
+        if (string.IsNullOrWhiteSpace(slug)) slug = "product";
+        string uniqueSlug = slug;
+        int counter = 1;
+        while (true)
+        {
+            var existing = await _productRepo.GetBySlugAsync(uniqueSlug);
+            if (existing == null || (excludeId.HasValue && existing.Id == excludeId.Value))
+                return uniqueSlug;
+            
+            uniqueSlug = $"{slug}-{counter++}";
+        }
+    }
+
+    private string GenerateSku()
+    {
+        return "PRD-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
+    }
 
     private async Task SaveProductImages(int productId, List<UpsertProductImageRequest> requests)
     {
